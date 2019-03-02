@@ -322,6 +322,7 @@ namespace GraphsApp
 
         private void StoerWagner()
         {
+            //Добавил коммент
             AMatrix = new int[V.Count, V.Count];
             G.fillAdjacencyMatrix(V.Count, E, AMatrix);
             int N = V.Count;
