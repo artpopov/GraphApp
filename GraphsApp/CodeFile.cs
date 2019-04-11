@@ -32,6 +32,23 @@ namespace GraphsApp
         }
     }
 
+    class CompareEdge : IEqualityComparer<Edge>
+    {
+        public bool Equals(Edge x, Edge y)
+        {
+            if ((x.v1 == y.v1 && x.v2 == y.v2) || (x.v1 == y.v2 && x.v2 == y.v1))
+            {
+                return true;
+            }
+            else { return false; }
+        }
+        public int GetHashCode(Edge codeh)
+        {
+            return 0;
+        }
+
+    }
+
     class DrawGraph
     {
         Bitmap bitmap;

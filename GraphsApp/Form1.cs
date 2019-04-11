@@ -16,6 +16,7 @@ namespace GraphsApp
         DrawGraph G;
         List<Vertex> V;
         List<Edge> E;
+        float RetVal = 0.99f; //надёжность ребра
         int[,] AMatrix; //матрица смежности
         // bool AMatrixCreated = false;
         int[,] IMatrix; //матрица инцидентности
@@ -393,6 +394,35 @@ namespace GraphsApp
             listBoxMatrix.Items.Add(bestCost.ToString());
         }
 
+        private void Moore_Shannon(List<Edge> E)
+        {
+            
+        }
+
+        private List<Edge> ContractEdge(List<Edge> oldE, int k)
+        {
+            List<Edge> newE = new List<Edge>(oldE);
+            int vertice1 = newE[k].v1;
+            int vertice2 = newE[k].v2;
+            int newVertice = newE.Count;
+            newE.RemoveAt(k);
+            foreach(Edge e in newE)
+            {
+                if (e.v1 == vertice1 || e.v1 == vertice2)
+                     e.v1 = newVertice;
+                if (e.v2 == vertice1 || e.v2 == vertice2)
+                    e.v2 = newVertice;
+            }
+             return newE.Distinct(new CompareEdge()).ToList();
+        }
+
+        private List<Edge> DeleteEdge(List<Edge> oldE,int k)
+        {
+            List<Edge> newE = new List<Edge>(oldE);
+            newE.RemoveAt(k);
+            return newE; 
+        }
+
 
 
         //обход в глубину. поиск элементарных цепей. (1-white 2-black)
@@ -527,9 +557,13 @@ namespace GraphsApp
             }
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        private void button1_Click(object sender, EventArgs e) //пока это прост тест button
         {
-            StoerWagner();
+            //StoerWagner();
+            int k = 3;
+            List<Edge> newGraph =  DeleteEdge(E, k);
+            foreach(Edge ede in newGraph)
+            listBoxMatrix.Items.Add("("+ede.v1.ToString()+","+ ede.v2.ToString()+")");
         }
     }
 }
