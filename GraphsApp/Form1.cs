@@ -16,10 +16,10 @@ namespace GraphsApp
         DrawGraph G;
         List<Vertex> V;
         List<Edge> E;
-        float RetVal = 0.99f;
+        float RetVal = 0.98f;
         float Reliability;//надёжность ребра
         int[,] AMatrix; //матрица смежности
-        public Dictionary<int, HashSet<int>> AdjacencyList { get; } = new Dictionary<int, HashSet<int>>();
+        public Dictionary<int, HashSet<int>> AdjacencyList { get; set; } = new Dictionary<int, HashSet<int>>();
         // bool AMatrixCreated = false;
         int[,] IMatrix; //матрица инцидентности
 
@@ -408,14 +408,22 @@ namespace GraphsApp
             listBoxMatrix.Items.Add(bestCost.ToString());
         }
 
-        //private float Moore_Shannon(List<Edge> E)
-        //{
-        //    if (unconnected(E)) return 0;
-        //    else if (E.Count == 1) return RetVal;
-        //    else
-        //        Reliability = RetVal * Moore_Shannon(ContractEdge(E, 0)) + (1 - RetVal) * Moore_Shannon(DeleteEdge(E, 0));
-        //    return Reliability;
-        //}
+        private float Moore_Shannon(Dictionary<int, HashSet<int>> AdjList)
+        {
+
+            if (!(isConnected(AdjList))) return 0;
+            else if (AdjList.Count == 2) return RetVal;
+            else
+            {
+                Edge picked = pickEdge(AdjList);
+                //Reliability = RetVal * Moore_Shannon(ContractEdge(AdjList, new Edge(AdjList.ElementAt(0).Key, AdjList.ElementAt(0).Value.ElementAt(0))))
+                //                    + (1 - RetVal) * Moore_Shannon(DeleteEdge(AdjList, new Edge(AdjList.ElementAt(0).Key, AdjList.ElementAt(0).Value.ElementAt(0))));
+                Reliability = RetVal * Moore_Shannon(ContractEdge(AdjList, picked))
+                                   + (1 - RetVal) * Moore_Shannon(DeleteEdge(AdjList, picked));
+
+            }
+            return Reliability;
+        }
 
         private List<Edge> ContractEdge(List<Edge> oldE, int k)
         {
@@ -437,12 +445,15 @@ namespace GraphsApp
 
         private Dictionary<int, HashSet<int>> ContractEdge(Dictionary<int, HashSet<int>> oldAdjList, Edge del)
         {
-            Dictionary<int, HashSet<int>> newAdjList = new Dictionary<int, HashSet<int>>(oldAdjList);
-            int newVertice = newAdjList.Count;
+            Dictionary<int, HashSet<int>> newAdjList = ObjectCopier.Clone(oldAdjList);
+           // Dictionary<int, HashSet<int>> newAdjList = new Dictionary<int, HashSet<int>>(oldAdjList);
+            int newVertice = 10;
+            newVertice = newAdjList.Count + newVertice;
             newAdjList[del.v1].UnionWith(newAdjList[del.v2]);
             newAdjList.Add(newVertice, newAdjList[del.v1]);
             newAdjList.Remove(del.v1); newAdjList.Remove(del.v2);
-            foreach (KeyValuePair<int, HashSet<int>> AdjVertice in AdjacencyList)
+
+            foreach (KeyValuePair<int, HashSet<int>> AdjVertice in newAdjList)
             {
                 foreach (int Item in AdjVertice.Value.ToArray())
                 {
@@ -453,18 +464,70 @@ namespace GraphsApp
                     }
                 }
             }
-
-                return newAdjList;
+            newAdjList[newVertice].Remove(newVertice); // удалить новый надо 2 раза 
+            return newAdjList; // новые ключи не совпадают с индексами - обращаться к КЛЮЧАМ !
         }
 
 
 
         private Dictionary<int, HashSet<int>> DeleteEdge(Dictionary<int,HashSet<int>> oldAdjList, Edge del)
         {
-            Dictionary<int, HashSet<int>> newAdjList= new Dictionary<int, HashSet<int>>(oldAdjList);
+            //Dictionary<int, HashSet<int>> newAdjList= new Dictionary<int, HashSet<int>>(oldAdjList);
+            Dictionary<int, HashSet<int>> newAdjList = ObjectCopier.Clone(oldAdjList);
             newAdjList[del.v1].Remove(del.v2);
-            newAdjList[del.v2].Remove(del.v1);
+            newAdjList[del.v2].Remove(del.v1); //  Я ДАУН ??
             return newAdjList;
+        }
+
+
+        //Обход в ширину. Нужен для проверки на связность
+        private HashSet<int> BFS(Dictionary<int, HashSet<int>> AdjList, int start)
+        {
+            var visited = new HashSet<int>();
+
+            if (!AdjList.ContainsKey(start))
+                return visited;
+
+            var queue = new Queue<int>();
+            queue.Enqueue(start);
+
+            while (queue.Count > 0)
+            {
+                var vertex = queue.Dequeue();
+
+                if (visited.Contains(vertex))
+                    continue;
+
+                visited.Add(vertex);
+
+                foreach (var neighbor in AdjList[vertex])
+                    if (!visited.Contains(neighbor))
+                        queue.Enqueue(neighbor);
+            }
+            return visited;
+        }
+
+        private bool isConnected (Dictionary<int, HashSet<int>> AdjList)
+        {
+            HashSet<int> visit = BFS(AdjList, AdjList.ElementAt(0).Key);
+            if (visit.Count < AdjList.Count) return false;
+            else return true;
+        }
+
+        private Edge pickEdge(Dictionary<int, HashSet<int>> AdjList)
+        {
+           // int edge1, edge2;
+            foreach (KeyValuePair<int, HashSet<int>> AdjVertice in AdjList)
+            {
+                if (AdjVertice.Value == null) continue;
+                if (AdjVertice.Value != null)
+                {
+                     int edge1 = AdjVertice.Key;
+                     int edge2 = AdjVertice.Value.ElementAt(0);
+                    return new Edge(edge1, edge2);              
+                }
+            }
+            return new Edge(0, 0);      
         }
 
 
@@ -603,11 +666,17 @@ namespace GraphsApp
         private void button1_Click(object sender, EventArgs e) //пока это прост тест button
         {
             //StoerWagner();
-            
-            Dictionary<int, HashSet<int>> newGraph =  ContractEdge(AdjacencyList, new Edge(1,3));
-            foreach (KeyValuePair<int, HashSet<int>> AdjVertice in AdjacencyList)
-                foreach (int Item in AdjVertice.Value)
-                    listBoxMatrix.Items.Add(AdjVertice.Key + ":" + Item.ToString());
+            listBoxMatrix.Items.Clear();
+            //int edge1 = AdjacencyList.ElementAt(0).Key; 
+            //int edge2 = AdjacencyList.ElementAt(0).Value.ElementAt(0);
+            //Dictionary<int, HashSet<int>> newGraph = DeleteEdge(AdjacencyList,
+            //                                          new Edge(edge1, edge2));
+            //AdjacencyList = newGraph;
+            //foreach (KeyValuePair<int, HashSet<int>> AdjVertice in AdjacencyList)
+            //    foreach (int Item in AdjVertice.Value)
+            //        listBoxMatrix.Items.Add(AdjVertice.Key + ":" + Item.ToString());
+            // listBoxMatrix.Items.Add(isConnected(AdjacencyList,0).ToString());
+             listBoxMatrix.Items.Add(Moore_Shannon(AdjacencyList).ToString());
         }
 
         private void button2_Click(object sender, EventArgs e)
